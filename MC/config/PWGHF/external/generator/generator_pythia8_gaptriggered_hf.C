@@ -2,6 +2,7 @@
 #include "Generators/GeneratorPythia8.h"
 #include "Pythia8/Pythia.h"
 #include "TRandom.h"
+#include <fairlogger/Logger.h>
 
 #include <string>
 #include <vector>
@@ -15,19 +16,21 @@ public:
   GeneratorPythia8GapTriggeredHF() = default;
 
   /// constructor
-  GeneratorPythia8GapTriggeredHF(int inputTriggerRatio = 5, std::vector<int> quarkPdgList = {4}, bool doAltInjection = false) {
+  GeneratorPythia8GapTriggeredHF(int inputTriggerRatio = 5, std::vector<int> quarkPdgList = {4}, std::vector<int> hadronPdgList = {4132, 4332}, bool doAltInjectionQuark = false, bool doAltInjectionHadron = true) {
 
     mGeneratedEvents = 0;
-    mHadronPdg = 0; // unless differently set, we do not trigger on specific hadron species
+    mHadronPdg = hadronPdgList[0]; 
     mQuarkPdg = quarkPdgList[0];
     mInverseTriggerRatio = inputTriggerRatio;
     mQuarkRapidityMin = -1.5;
     mQuarkRapidityMax = -1.5;
     mHadRapidityMin = -1.5;
     mHadRapidityMax = -1.5;
-    mDoNoQuarkTrigger = false;
-    mDoAltInjection = doAltInjection;
+    mDoNoQuarkTrigger = true;
+    mDoAltInjectionQuark = doAltInjectionQuark;
+    mDoAltInjectionHadron = doAltInjectionHadron;
     mQuarkPdgList = quarkPdgList;
+    mHadronPdgList = hadronPdgList;
   }
 
   ///  Destructor
@@ -70,8 +73,13 @@ protected:
       notifySubGenerator(mQuarkPdg);
 
       // Alternate charm and beauty if enabled (with the same ratio)
-      if(mDoAltInjection) {
+      if(mDoAltInjectionQuark) {
         mQuarkPdg = (mQuarkPdg == mQuarkPdgList[0]) ? mQuarkPdgList[1] : mQuarkPdgList[0];
+      }      
+      
+      // Alternate Omega and Xi if enabled (with the same ratio)
+      if(mDoAltInjectionHadron) {
+        mHadronPdg = (mHadronPdg == mHadronPdgList[0]) ? mHadronPdgList[1] : mHadronPdgList[0];
       }
 
     } else {
@@ -134,6 +142,8 @@ protected:
         }
       }
 
+      LOG(info)<<"--- Particle / mHadronPdg: "<<std::abs(event[iPart].id())<< " / " << mHadronPdg<<"\n";
+
       // we send the trigger
       if (isGoodAtPartonLevel && isGoodAtHadronLevel) {
         return true;
@@ -161,14 +171,18 @@ private:
   int mInverseTriggerRatio;
 
   // Control alternate injection of charm and beauty
-  bool mDoAltInjection;
+  bool mDoAltInjectionQuark;
   std::vector<int> mQuarkPdgList;
+
+  // Control alternate injection of Omega and Xi
+  bool mDoAltInjectionHadron;
+  std::vector<int> mHadronPdgList;
 };
 
 // Predefined generators:
 // Charm-enriched
-FairGenerator *GeneratorPythia8GapTriggeredCharm(int inputTriggerRatio, float yQuarkMin=-1.5, float yQuarkMax=1.5, float yHadronMin=-1.5, float yHadronMax=1.5, int pdgCodeCharmHadron=0, bool doNoQuarkTrigger=false) {
-  auto myGen = new GeneratorPythia8GapTriggeredHF(inputTriggerRatio, std::vector<int>{4}, false);
+FairGenerator *GeneratorPythia8GapTriggeredCharm(int inputTriggerRatio, float yQuarkMin=-1.5, float yQuarkMax=1.5, float yHadronMin=-1.5, float yHadronMax=1.5, int pdgCodeCharmHadron=0, bool doNoQuarkTrigger=true) {
+  auto myGen = new GeneratorPythia8GapTriggeredHF(inputTriggerRatio, std::vector<int>{4}, std::vector<int> {4132, 4332}, false, true);
   auto seed = (gRandom->TRandom::GetSeed() % 900000000);
   myGen->readString("Random:setSeed on");
   myGen->readString("Random:seed " + std::to_string(seed));
@@ -183,7 +197,7 @@ FairGenerator *GeneratorPythia8GapTriggeredCharm(int inputTriggerRatio, float yQ
 
 // Beauty-enriched
 FairGenerator *GeneratorPythia8GapTriggeredBeauty(int inputTriggerRatio, float yQuarkMin=-1.5, float yQuarkMax=1.5, float yHadronMin=-1.5, float yHadronMax=1.5, int pdgCodeCharmHadron=0, bool doNoQuarkTrigger=false) {
-  auto myGen = new GeneratorPythia8GapTriggeredHF(inputTriggerRatio, std::vector<int>{5}, false);
+  auto myGen = new GeneratorPythia8GapTriggeredHF(inputTriggerRatio, std::vector<int>{5}, std::vector<int> {4132, 4332}, false, true);
   auto seed = (gRandom->TRandom::GetSeed() % 900000000);
   myGen->readString("Random:setSeed on");
   myGen->readString("Random:seed " + std::to_string(seed));
@@ -198,7 +212,7 @@ FairGenerator *GeneratorPythia8GapTriggeredBeauty(int inputTriggerRatio, float y
 
 // Charm and beauty enriched (with same ratio)
 FairGenerator *GeneratorPythia8GapTriggeredCharmAndBeauty(int inputTriggerRatio, float yQuarkMin=-1.5, float yQuarkMax=1.5, float yHadronMin=-1.5, float yHadronMax=1.5, int pdgCodeCharmHadron=0, bool doNoQuarkTrigger=false) {
-  auto myGen = new GeneratorPythia8GapTriggeredHF(inputTriggerRatio,  std::vector<int>{4, 5}, true);
+  auto myGen = new GeneratorPythia8GapTriggeredHF(inputTriggerRatio,  std::vector<int>{4, 5}, std::vector<int> {4132, 4332}, true, true);
   auto seed = (gRandom->TRandom::GetSeed() % 900000000);
   myGen->readString("Random:setSeed on");
   myGen->readString("Random:seed " + std::to_string(seed));
