@@ -295,7 +295,7 @@ BFIELD=args.field
 RNDSEED=args.seed # typically the argument should be the jobid, but if we get None the current time is used for the initialisation
 random.seed(RNDSEED)
 print ("Using initialisation seed: ", RNDSEED)
-SIMSEED = random.randint(1, 900000000 - NTIMEFRAMES - 1) # PYTHIA maximum seed is 900M for some reason
+SIMSEED = random.randint(1, 900000000 - NTIMEFRAMES * NWORKERS - 1) # PYTHIA maximum seed is 900M for some reason
 
 workflow={}
 workflow['stages'] = []
@@ -507,7 +507,7 @@ workflow['stages'].append(TPC_SPACECHARGE_DOWNLOADER_TASK)
 
 # loop over timeframes
 for tf in range(1, NTIMEFRAMES + 1):
-   TFSEED = SIMSEED + tf
+   TFSEED = SIMSEED + tf * NWORKERS
    print("Timeframe " + str(tf) + " seed: ", TFSEED)
 
    timeframeworkdir='tf'+str(tf)
